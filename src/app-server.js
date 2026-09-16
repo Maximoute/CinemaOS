@@ -7,7 +7,7 @@ try { process.loadEnvFile(path.join(ROOT, '.env')); } catch (e) { if (e.code !==
 const seed = require('./catalog.json');
 const genres = {28:'Action',12:'Aventure',16:'Animation',35:'Comédie',80:'Crime',99:'Documentaire',18:'Drame',10751:'Famille',14:'Fantastique',36:'Histoire',27:'Horreur',10402:'Musique',9648:'Mystère',10749:'Romance',878:'Science-fiction',53:'Thriller',10752:'Guerre',37:'Western'};
 function normalize(m) {
-  return { id:m.id, title:m.title, year:(m.release_date || '').slice(0,4), overview:m.overview || 'Synopsis indisponible.', poster:m.poster_path || null, backdrop:m.backdrop_path || null, rating:m.vote_average || 0, genres:m.genres?.map(g=>g.name) || m.genre_ids?.map(id=>genres[id]).filter(Boolean) || [], runtime:m.runtime || null, director:m.credits?.crew?.find(c=>c.job==='Director')?.name || '', cast:m.credits?.cast?.slice(0,5).map(c=>c.name) || [], country:m.production_countries?.map(c=>c.name).join(', ') || '', tagline:m.tagline || '' };
+  return { id:m.id, title:m.title, aliases:m.aliases || [], year:(m.release_date || m.year || '').slice(0,4), overview:m.overview || 'Synopsis indisponible.', poster:m.poster_path || m.poster || null, backdrop:m.backdrop_path || m.backdrop || null, rating:m.vote_average || m.rating || 0, genres:m.genres?.map(g=>g.name) || m.genre_ids?.map(id=>genres[id]).filter(Boolean) || m.genres || [], runtime:m.runtime || null, director:m.credits?.crew?.find(c=>c.job==='Director')?.name || m.director || '', cast:m.credits?.cast?.slice(0,5).map(c=>c.name) || m.cast || [], country:m.production_countries?.map(c=>c.name).join(', ') || '', tagline:m.tagline || '' };
 }
 function createApp({dataDir=path.join(ROOT,'data'), offline=false, fetcher=fetch}={}) {
   fs.mkdirSync(dataDir,{recursive:true});
@@ -52,8 +52,8 @@ function createApp({dataDir=path.join(ROOT,'data'), offline=false, fetcher=fetch
       if(p==='/api/movies' && req.method==='GET') {
         const q=str(url.searchParams.get('q'),200);const page=Math.max(1,Math.min(50,Number(url.searchParams.get('page'))||1));
         if(!q && url.searchParams.get('collection')==='curated')return send(200,{movies:seed.map(m=>cache[m.id] || m),source:'selection',page:1,pages:1});
-        try {const d=await tmdb(q?'search/movie':'movie/popular',{...(q?{query:q}:{}),page});const movies=d.results.filter(m=>!m.adult).map(normalize);remember(movies);return send(200,{movies,source:'tmdb',page,pages:Math.min(d.total_pages,50)});}
-        catch {return send(200,{movies:allLocal().filter(m=>!q||fold(m.title).includes(fold(q))),source:'local',page:1,pages:1});}
+        try {const tmdbQuery=q && /long\s*(way|walk)|300\s*km|marche|cr[eè]ve/i.test(q)?'The Long Walk':q;const d=await tmdb(q?'search/movie':'movie/popular',{...(q?{query:tmdbQuery}:{}),page});const movies=d.results.filter(m=>!m.adult).map(normalize);remember(movies);return send(200,{movies,source:'tmdb',page,pages:Math.min(d.total_pages,50)});}
+        catch {return send(200,{movies:allLocal().filter(m=>!q||fold(m.title+' '+(m.aliases||[]).join(' ')).includes(fold(q)) || (/long\s*(way|walk)|300\s*km|marche|cr[eè]ve/i.test(q)&&m.id===604079)),source:'local',page:1,pages:1});}
       }
       if(/^\/api\/movies\/\d+$/.test(p) && req.method==='GET'){const m=await movie(Number(p.split('/').pop()));return m?send(200,m):send(404,{error:'Film introuvable.'});}
       if(/^\/api\/library\/\d+$/.test(p) && req.method==='PATCH') {
@@ -61,6 +61,7 @@ function createApp({dataDir=path.join(ROOT,'data'), offline=false, fetcher=fetch
         const entry=state.library[id] || {movie:m,watchlist:false,favorite:false};
         if(typeof b.watchlist==='boolean')entry.watchlist=b.watchlist;
         if(typeof b.favorite==='boolean')entry.favorite=b.favorite;
+        if(typeof b.seen==='boolean')entry.seen=b.seen;
         state.library[id]=entry;persist();return send(200,state);
       }
       if(p==='/api/viewings' && req.method==='POST') {
@@ -68,8 +69,14 @@ function createApp({dataDir=path.join(ROOT,'data'), offline=false, fetcher=fetch
         const rating=Number(b.rating);if(!Number.isFinite(rating)||rating<0||rating>10)throw error('La note doit être entre 0 et 10.');
         if(!/^\d{4}-\d{2}-\d{2}$/.test(b.date||'') || Number.isNaN(Date.parse(b.date)))throw error('Date invalide.');
         const m=state.library[id]?.movie || await movie(id);if(!m)throw error('Film introuvable.',404);
-        state.library[id]={...(state.library[id] || {favorite:false}),movie:m,watchlist:false};
+        state.library[id]={...(state.library[id] || {favorite:false}),movie:m,watchlist:false,seen:true};
         state.viewings.unshift({id:randomUUID(),movieId:id,date:b.date,rating,reaction:str(b.reaction),scene:str(b.scene),question:str(b.question),critique:str(b.critique),concept:str(b.concept,100)});persist();return send(201,state);
+      }
+      if(/^\/api\/viewings\/[0-9a-f-]+$/.test(p) && req.method==='PATCH') {
+        const id=p.split('/').pop();const b=await body(req);const viewing=state.viewings.find(v=>v.id===id);if(!viewing)throw error('Séance introuvable.',404);
+        for(const key of ['date','reaction','scene','question','critique','concept']) if(b[key]!==undefined) viewing[key]=str(b[key],key==='concept'?100:10000);
+        if(b.rating!==undefined){const rating=Number(b.rating);if(!Number.isFinite(rating)||rating<0||rating>10)throw error('La note doit être entre 0 et 10.');viewing.rating=rating;}
+        persist();return send(200,state);
       }
       if(p==='/api/inbox' && req.method==='POST'){const b=await body(req);if(!str(b.title,200).trim())throw error('Un titre est nécessaire.');state.inbox.unshift({id:randomUUID(),title:str(b.title,200).trim(),source:str(b.source,300),created:new Date().toISOString()});persist();return send(201,state);}
       if(p.startsWith('/api/inbox/') && req.method==='DELETE'){state.inbox=state.inbox.filter(i=>i.id!==p.split('/').pop());persist();return send(200,state);}
