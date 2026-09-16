@@ -4,4 +4,4 @@
 *.key
 *.pem
 secrets/
-
+node_modules/
