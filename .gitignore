@@ -6,3 +6,7 @@
 secrets/
 node_modules/
 desktop.ini
+data/
+test-results/
+playwright-report/
+*.log

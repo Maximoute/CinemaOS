@@ -1,0 +1,182 @@
+[
+  {
+    "id": 157336,
+    "title": "Interstellar",
+    "year": "2014",
+    "director": "Christopher Nolan",
+    "runtime": 169,
+    "genres": [
+      "Science-fiction",
+      "Aventure"
+    ],
+    "overview": "Un voyage au-delà des étoiles, et une question très humaine : que sommes-nous prêts à laisser derrière nous ?",
+    "rating": 8.4,
+    "poster": null,
+    "backdrop": null
+  },
+  {
+    "id": 680,
+    "title": "Pulp Fiction",
+    "year": "1994",
+    "director": "Quentin Tarantino",
+    "runtime": 154,
+    "genres": [
+      "Crime",
+      "Thriller"
+    ],
+    "overview": "À Los Angeles, plusieurs destins s’entrecroisent dans un récit où la chronologie devient un jeu.",
+    "rating": 8.5,
+    "poster": null,
+    "backdrop": null
+  },
+  {
+    "id": 129,
+    "title": "Le Voyage de Chihiro",
+    "year": "2001",
+    "director": "Hayao Miyazaki",
+    "runtime": 125,
+    "genres": [
+      "Animation",
+      "Fantastique"
+    ],
+    "overview": "Une jeune fille traverse un monde d’esprits et apprend à y trouver sa place.",
+    "rating": 8.5,
+    "poster": null,
+    "backdrop": null
+  },
+  {
+    "id": 120,
+    "title": "Le Seigneur des anneaux : La Communauté de l’anneau",
+    "year": "2001",
+    "director": "Peter Jackson",
+    "runtime": 179,
+    "genres": [
+      "Aventure",
+      "Fantastique"
+    ],
+    "overview": "Un petit groupe entreprend un voyage qui décidera du destin de la Terre du Milieu.",
+    "rating": 8.4,
+    "poster": null,
+    "backdrop": null
+  },
+  {
+    "id": 496243,
+    "title": "Parasite",
+    "year": "2019",
+    "director": "Bong Joon-ho",
+    "runtime": 132,
+    "genres": [
+      "Drame",
+      "Thriller"
+    ],
+    "overview": "Deux familles que tout sépare se retrouvent liées dans une maison où chaque étage raconte un rapport de pouvoir.",
+    "rating": 8.5,
+    "poster": null,
+    "backdrop": null
+  },
+  {
+    "id": 78,
+    "title": "Blade Runner",
+    "year": "1982",
+    "director": "Ridley Scott",
+    "runtime": 117,
+    "genres": [
+      "Science-fiction",
+      "Thriller"
+    ],
+    "overview": "Dans une ville noyée de pluie et de néons, un chasseur de réplicants interroge les frontières de l’humanité.",
+    "rating": 7.9,
+    "poster": null,
+    "backdrop": null
+  },
+  {
+    "id": 194,
+    "title": "Le Fabuleux Destin d’Amélie Poulain",
+    "year": "2001",
+    "director": "Jean-Pierre Jeunet",
+    "runtime": 122,
+    "genres": [
+      "Romance",
+      "Comédie"
+    ],
+    "overview": "À Montmartre, Amélie transforme discrètement la vie des autres avant d’oser changer la sienne.",
+    "rating": 7.9,
+    "poster": null,
+    "backdrop": null
+  },
+  {
+    "id": 244786,
+    "title": "Whiplash",
+    "year": "2014",
+    "director": "Damien Chazelle",
+    "runtime": 107,
+    "genres": [
+      "Drame",
+      "Musique"
+    ],
+    "overview": "Un jeune batteur et son professeur repoussent les limites entre ambition, discipline et obsession.",
+    "rating": 8.4,
+    "poster": null,
+    "backdrop": null
+  },
+  {
+    "id": 872585,
+    "title": "Oppenheimer",
+    "year": "2023",
+    "director": "Christopher Nolan",
+    "runtime": 181,
+    "genres": [
+      "Drame",
+      "Histoire"
+    ],
+    "overview": "Le parcours d’un physicien confronté aux conséquences politiques et morales de son travail.",
+    "rating": 8.1,
+    "poster": null,
+    "backdrop": null
+  },
+  {
+    "id": 313369,
+    "title": "La La Land",
+    "year": "2016",
+    "director": "Damien Chazelle",
+    "runtime": 128,
+    "genres": [
+      "Romance",
+      "Musique"
+    ],
+    "overview": "Deux artistes poursuivent leurs rêves dans un Los Angeles entre comédie musicale et désillusion.",
+    "rating": 7.9,
+    "poster": null,
+    "backdrop": null
+  },
+  {
+    "id": 389,
+    "title": "Douze Hommes en colère",
+    "year": "1957",
+    "director": "Sidney Lumet",
+    "runtime": 96,
+    "genres": [
+      "Drame",
+      "Crime"
+    ],
+    "overview": "Dans une salle de délibération, un juré met en doute une culpabilité que tous croyaient évidente.",
+    "rating": 8.5,
+    "poster": null,
+    "backdrop": null
+  },
+  {
+    "id": 346,
+    "title": "Les Sept Samouraïs",
+    "year": "1954",
+    "director": "Akira Kurosawa",
+    "runtime": 207,
+    "genres": [
+      "Action",
+      "Drame"
+    ],
+    "overview": "Des villageois engagent des samouraïs pour défendre leurs récoltes et leur avenir.",
+    "rating": 8.5,
+    "poster": null,
+    "backdrop": null
+  }
+]

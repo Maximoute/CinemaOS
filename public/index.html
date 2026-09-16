@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f6f3ec"><meta name="description" content="Votre cinéma, votre regard. Explorez, gardez vos envies de films et construisez votre carnet de cinéphile.">
+<title>CinemaOS — Votre cinéma, votre regard.</title>
+<link rel="icon" href="/assets/favicon.png"><link rel="stylesheet" href="/cinema.css"><script src="/app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Aller au contenu</a>
+<aside class="sidebar">
+<a class="brand" href="#home" aria-label="CinemaOS, accueil"><img src="/assets/icon-popcorn.png" alt=""><span>CINEMA<span class="red">OS</span><small>WATCH · THINK · BUILD</small></span></a>
+<p class="nav-label">VOTRE SALLE PRIVÉE</p>
+<nav aria-label="Navigation principale">
+<a href="#home" data-nav="home"><img src="/assets/icon-clap.png" alt="">À l’affiche</a>
+<a href="#explore" data-nav="explore"><img src="/assets/icon-search.png" alt="">Explorer</a>
+<a href="#watchlist" data-nav="watchlist"><img src="/assets/icon-bookmark.png" alt="">Ma watchlist <span id="watch-count" class="count">0</span></a>
+<a href="#favorites" data-nav="favorites"><img src="/assets/icon-heart.png" alt="">Coups de cœur</a>
+<a href="#inbox" data-nav="inbox"><img src="/assets/icon-ticket.png" alt="">Boîte à idées</a>
+<p class="nav-label">CULTIVER SON REGARD</p>
+<a href="#journal" data-nav="journal"><img src="/assets/icon-note.png" alt="">Mon carnet</a>
+<a href="#learn" data-nav="learn"><img src="/assets/icon-learn.png" alt="">L’atelier cinéma</a>
+<a href="#stats" data-nav="stats"><img src="/assets/icon-stats.png" alt="">Mon parcours</a>
+</nav>
+<div class="sidebar-ticket"><img src="/assets/illustration-popcorn.png" alt=""><p>Un bon film.<br>Une nouvelle perspective.</p><button class="text-button" data-action="surprise">Laissez-vous surprendre ↗</button></div>
+<a class="profile" href="#settings"><img src="/assets/avatar-default.png" alt=""><span id="profile-name">Cinéphile<small>Votre espace personnel</small></span><span>⚙</span></a>
+</aside>
+<div class="workspace">
+<header class="topbar"><span class="breadcrumb">VOTRE CINÉMA, <strong>VOTRE REGARD.</strong></span><form id="global-search" role="search"><img src="/assets/icon-search.png" alt=""><input name="q" aria-label="Rechercher un film" placeholder="Un film, une envie…"><kbd>↵</kbd></form><button class="button small" data-action="capture">＋ Ajouter une idée</button></header>
+<main id="main" tabindex="-1"><div class="loading">Le projecteur s’allume…</div></main>
+<footer class="footer"><span>CINEMA<span class="red">OS</span> <span class="muted">— Le cinéma commence par la curiosité.</span></span><a href="#settings">Données & crédits</a></footer>
+</div>
+<dialog id="film-dialog" aria-label="Fiche du film"></dialog>
+<dialog id="capture-dialog" aria-labelledby="capture-title"><button class="close" data-action="close">×</button><p class="eyebrow">NE PERDEZ PLUS UNE ENVIE</p><h2 id="capture-title">Ça mérite une séance.</h2><p class="muted">Un film aperçu dans un Reel, conseillé par un ami… Notez-le maintenant, explorez-le ensuite.</p><form id="capture-form"><label>Titre du film<input name="title" required maxlength="200" placeholder="Par exemple : Oldboy"></label><label>D’où vient cette idée ?<input name="source" maxlength="300" placeholder="Instagram, un ami, une vidéo…"></label><button class="button primary" type="submit">Garder cette idée →</button></form></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+</body></html>
