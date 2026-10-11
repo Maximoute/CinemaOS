@@ -12,11 +12,27 @@ function normalize(m) {
 function createApp({dataDir=path.join(ROOT,'data'), offline=false, fetcher=fetch}={}) {
   fs.mkdirSync(dataDir,{recursive:true});
   const stateFile=path.join(dataDir,'library.json');
-  let state={library:{},viewings:[],inbox:[],settings:{name:'Cinéphile'}};
-  if(fs.existsSync(stateFile)) state=JSON.parse(fs.readFileSync(stateFile,'utf8'));
+  const emptyState=()=>({library:{},viewings:[],inbox:[],settings:{name:'Cinéphile'}});
+  let state=emptyState();
+  let stateVersion='';
+  const loadState=()=>{
+    if(!fs.existsSync(stateFile))return;
+    const stat=fs.statSync(stateFile);
+    const version=stat.mtimeMs+':'+stat.size;
+    if(version===stateVersion)return;
+    const loaded=JSON.parse(fs.readFileSync(stateFile,'utf8'));
+    state={...emptyState(),...loaded,library:loaded.library||{},viewings:loaded.viewings||[],inbox:loaded.inbox||[],settings:{...emptyState().settings,...loaded.settings}};
+    stateVersion=version;
+  };
+  loadState();
   let cache={};
   try { cache=JSON.parse(fs.readFileSync(path.join(dataDir,'catalog-cache.json'),'utf8')); } catch {}
-  const persist=()=>{fs.writeFileSync(stateFile+'.tmp',JSON.stringify(state,null,2));fs.renameSync(stateFile+'.tmp',stateFile);};
+  const persist=()=>{
+    const temporary=stateFile+'.'+process.pid+'.tmp';
+    fs.writeFileSync(temporary,JSON.stringify(state,null,2));
+    fs.renameSync(temporary,stateFile);
+    const stat=fs.statSync(stateFile);stateVersion=stat.mtimeMs+':'+stat.size;
+  };
   const allLocal=()=>Array.from(new Map([...seed,...Object.values(cache)].map(m=>[m.id,m])).values());
   async function tmdb(route,params={}) {
     if(offline || (!process.env.TMDB_READ_ACCESS_TOKEN && !process.env.TMDB_API_KEY)) throw Error('offline');
@@ -41,18 +57,43 @@ function createApp({dataDir=path.join(ROOT,'data'), offline=false, fetcher=fetch
   }
   const str=(v,max=10000)=>typeof v==='string'?v.slice(0,max):'';
   const error=(msg,status=400)=>Object.assign(Error(msg),{status});
+  function checkpoint(value){
+    if(!value||typeof value.query!=='string'||typeof value.genre!=='string'||typeof value.sort!=='string'||!Array.isArray(value.queue)||!Array.isArray(value.known))throw error('Progression invalide.');
+    const ids=list=>list.slice(0,10000).filter(id=>Number.isSafeInteger(id)&&id>0);
+    return {query:value.query.slice(0,200),genre:value.genre.slice(0,40),sort:value.sort.slice(0,20),queue:ids(value.queue),known:ids(value.known),nextPage:Math.max(1,Math.min(500,Number(value.nextPage)||1)),remaining:Math.max(0,Math.min(499,Number(value.remaining)||0)),limit:Math.max(1,Math.min(500,Number(value.limit)||1)),updated:new Date().toISOString()};
+  }
   const handler=async(req,res)=>{
     const send=(status,value,type='application/json; charset=utf-8')=>{res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(type.startsWith('application/json')?JSON.stringify(value):value);};
     try {
       const url=new URL(req.url,'http://localhost');const p=url.pathname;
       if(req.headers.host && !/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(req.headers.host))return send(403,{error:'Hôte non autorisé.'});
       if(!['GET','HEAD'].includes(req.method) && req.headers.origin && req.headers.origin!=='http://'+req.headers.host)return send(403,{error:'Origine non autorisée.'});
-      if(p==='/api/status')return send(200,{configured:!offline && !!(process.env.TMDB_READ_ACCESS_TOKEN||process.env.TMDB_API_KEY),storage:'local'});
+      if(p.startsWith('/api/'))loadState();
+      if(p==='/api/status')return send(200,{configured:!offline && !!(process.env.TMDB_READ_ACCESS_TOKEN||process.env.TMDB_API_KEY),storage:'local',synchronized:true,dataFile:stateFile});
       if(p==='/api/state' && req.method==='GET')return send(200,state);
+      if(p==='/api/exploration' && req.method==='GET')return send(200,{progress:state.exploration||null,movies:(state.exploration?.queue||[]).map(id=>cache[id]||state.library[id]?.movie||seed.find(m=>m.id===id)).filter(Boolean)});
+      if(p==='/api/exploration' && req.method==='PATCH'){const b=await body(req);state.exploration=checkpoint(b);persist();return send(200,state.exploration);}
+      if(p==='/api/discovery' && req.method==='GET') {
+        const genreId=Object.keys(genres).find(id=>genres[id]===url.searchParams.get('genre'));
+        const duration=Math.max(1,Math.min(999,Number(url.searchParams.get('duration'))||999));
+        const batches=await Promise.allSettled([0,1,2].map(i=>tmdb('discover/movie',{page:1+i*20+Math.floor(Math.random()*20),sort_by:i===1?'vote_average.desc':'popularity.desc','vote_count.gte':100,'with_runtime.lte':duration,'with_runtime.gte':1,...(genreId?{with_genres:genreId}:{})})));
+        const remote=batches.flatMap(r=>r.status==='fulfilled'?r.value.results.filter(m=>!m.adult).map(normalize):[]);
+        remember(remote);
+        const pool=remote.length?remote:allLocal().filter(m=>(!genreId||m.genres.includes(genres[genreId]))&&(!m.runtime||m.runtime<=duration));
+        for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+        return send(200,{movies:Array.from(new Map(pool.map(m=>[m.id,m])).values()),source:remote.length?'tmdb':'local'});
+      }
       if(p==='/api/movies' && req.method==='GET') {
-        const q=str(url.searchParams.get('q'),200);const page=Math.max(1,Math.min(50,Number(url.searchParams.get('page'))||1));
+        const q=str(url.searchParams.get('q'),200);const page=Math.max(1,Math.min(500,Math.floor(Number(url.searchParams.get('page'))||1)));
+        const genreId=Object.keys(genres).find(id=>genres[id]===url.searchParams.get('genre'));
+        const sorting={rating:'vote_average.desc',year:'primary_release_date.desc'}[url.searchParams.get('sort')]||'popularity.desc';
         if(!q && url.searchParams.get('collection')==='curated')return send(200,{movies:seed.map(m=>cache[m.id] || m),source:'selection',page:1,pages:1});
-        try {const tmdbQuery=q && /long\s*(way|walk)|300\s*km|marche|cr[eè]ve/i.test(q)?'The Long Walk':q;const d=await tmdb(q?'search/movie':'movie/popular',{...(q?{query:tmdbQuery}:{}),page});const movies=d.results.filter(m=>!m.adult).map(normalize);remember(movies);return send(200,{movies,source:'tmdb',page,pages:Math.min(d.total_pages,50)});}
+        try {
+          const params=q?{query:q}:{sort_by:sorting,include_video:false,...(genreId?{with_genres:genreId}:{}),...(sorting==='vote_average.desc'?{'vote_count.gte':100}:{}),...(sorting==='primary_release_date.desc'?{'primary_release_date.lte':new Date().toISOString().slice(0,10)}:{})};
+          const d=await tmdb(q?'search/movie':'discover/movie',{...params,page});
+          const movies=d.results.filter(m=>!m.adult).map(normalize);remember(movies);
+          return send(200,{movies,source:'tmdb',page,pages:Math.min(d.total_pages,500),total:d.total_results});
+        }
         catch {return send(200,{movies:allLocal().filter(m=>!q||fold(m.title+' '+(m.aliases||[]).join(' ')).includes(fold(q)) || (/long\s*(way|walk)|300\s*km|marche|cr[eè]ve/i.test(q)&&m.id===604079)),source:'local',page:1,pages:1});}
       }
       if(/^\/api\/movies\/\d+$/.test(p) && req.method==='GET'){const m=await movie(Number(p.split('/').pop()));return m?send(200,m):send(404,{error:'Film introuvable.'});}
@@ -62,7 +103,7 @@ function createApp({dataDir=path.join(ROOT,'data'), offline=false, fetcher=fetch
         if(typeof b.watchlist==='boolean')entry.watchlist=b.watchlist;
         if(typeof b.favorite==='boolean')entry.favorite=b.favorite;
         if(typeof b.seen==='boolean')entry.seen=b.seen;
-        state.library[id]=entry;persist();return send(200,state);
+        state.library[id]=entry;if(b.exploration)state.exploration=checkpoint(b.exploration);persist();return send(200,state);
       }
       if(p==='/api/viewings' && req.method==='POST') {
         const b=await body(req);const id=Number(b.movieId);if(!Number.isInteger(id)||id<=0)throw error('Film invalide.');
